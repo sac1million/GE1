@@ -63,6 +63,7 @@ void ObstacleAvoidanceScenario::Initialise()
 	obsParams.push_back(ObstacleParam(glm::vec3(-25, 120, -250), 10));
 	obsParams.push_back(ObstacleParam(glm::vec3(-25, 80, -250), 10));
 	obsParams.push_back(ObstacleParam(glm::vec3(-25, 80, -280), 14));
+	
 	for (int i = 0 ; i < obsParams.size() ; i ++)
 	{
 		shared_ptr<Sphere> obstacle = make_shared<Sphere>(obsParams[i].radius);

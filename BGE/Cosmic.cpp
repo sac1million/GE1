@@ -3,15 +3,34 @@
 #include "VectorDrawer.h"
 #include "LazerBeam.h"
 #include "FountainEffect.h"
+#include "ObstacleAvoidanceScenario.h"
+#include "Params.h"
+#include "SteeringGame.h"
 
 using namespace BGE;
+
+
+struct obsParam
+{
+public:
+	glm::vec3 pos;
+	float radius;
+	vector<obsParam> sphere;
+
+	obsParam(glm::vec3 pos, float radius)
+	{
+		this->pos = pos;
+		this->radius = radius;
+	}
+};
+
 
 Cosmic::Cosmic(void)
 {
 	elapsed = 10000;
 	speed = 5.0f;
+	score = 0;
 }
-
 
 Cosmic::~Cosmic(void)
 {
@@ -19,87 +38,82 @@ Cosmic::~Cosmic(void)
 
 bool Cosmic::Initialise()
 {
-/*	earth = make_shared<GameComponent>();
-	earth->Attach(Content::LoadModel("myearth"));
-	earth->position = glm::vec3(0,0,0);
-	earth->scale = glm::vec3(5,5,5);
-	earth->diffuse = glm::vec3(1.2f, 1.2f, 1.2f);
-	Attach(earth); */
 	
-	sphere[0] = make_shared<Sphere>(2);
-	sphere[0]->position = glm::vec3(0, 2, 10);
-    sphere[0]->diffuse = glm::vec3(1.0f,1.0f,1.0f);
-	Attach(sphere[0]);
+	// sphere for shooting star
+	shared_ptr<Sphere> fountainSphere = make_shared<Sphere>(0.5);
+	fountainSphere->diffuse = glm::vec3(1.0f,1.0f,0.0f);
 
-	sphere[1] = make_shared<Sphere>(2);
-	sphere[1]->position = glm::vec3(10, 2, -10);
-    sphere[1]->diffuse = glm::vec3(1.0f,0.0f,0.0f);
-	Attach(sphere[1]);
-
-	sphere[2] = make_shared<Sphere>(2);
-	sphere[2]->position = glm::vec3(-10, 2, -10);
-    sphere[2]->diffuse = glm::vec3(1.0f,0.0f,0.0f);
-	Attach(sphere[2]);
-
-	sphere[3] = make_shared<Sphere>(4);
-	sphere[3]->position = glm::vec3(0, 2, -30);
-    sphere[3]->diffuse = glm::vec3(1.0f,1.0f,0.0f);
-	Attach(sphere[3]);
+	Params::Load("default");
+	shootingStar = make_shared<FountainEffect>(200);
+	shootingStar->diffuse = glm::vec3(1.0f,1.0f,0.0f);
+	shootingStar->tag = "Steerable";
+	starController = make_shared<SteeringController>();
+	starController->position = glm::vec3(0, 10, 10);      
+	starController->TurnOn(SteeringController::behaviour_type::arrive);
+	starController->TurnOn(SteeringController::behaviour_type::obstacle_avoidance);
+	starController->targetPos = glm::vec3(0, 0, -100);
+	shootingStar->Attach(starController);
 	
-	sphere[4] = make_shared<Sphere>(2);
-	sphere[4]->position = glm::vec3(6, 10, -20);
-    sphere[4]->diffuse = glm::vec3(0.0f,1.0f,0.0f);
-	Attach(sphere[4]);
-	
-	sphere[5] = make_shared<Sphere>(2);
-	sphere[5]->position = glm::vec3(-6, -6, -20);
-    sphere[5]->diffuse = glm::vec3(0.0f,1.0f,0.0f);
-	Attach(sphere[5]);
+	shootingStar->Attach(fountainSphere);
+	shootingStar->scale = glm::vec3(2,2,2);
+	Attach(shootingStar);
 
-	sphere[6] = make_shared<Sphere>(2);
-	sphere[6]->position = glm::vec3(-6, 10, -20);
-    sphere[6]->diffuse = glm::vec3(1.0f,0.0f,1.0f);
-	Attach(sphere[6]);
+	// declare obstacles for shooting star obstacle avoidance.
+	vector<obsParam> obstacle;
+	obstacle.push_back(obsParam(glm::vec3(0, 2, 10), 2));
+	obstacle.push_back(obsParam(glm::vec3(11, 2, -10), 2));
+	obstacle.push_back(obsParam(glm::vec3(-10, 2, -10), 2));
+	obstacle.push_back(obsParam(glm::vec3(3, 2, -25), 2));
+	obstacle.push_back(obsParam(glm::vec3(0, 10, -10), 2));
+	obstacle.push_back(obsParam(glm::vec3(0, -10, -10), 2));
+	obstacle.push_back(obsParam(glm::vec3(-6, 10, -20), 2));
+	obstacle.push_back(obsParam(glm::vec3(-6, 2, -20), 2));
+	obstacle.push_back(obsParam(glm::vec3(6, 2, 10), 2));
+	obstacle.push_back(obsParam(glm::vec3(0, 8, 10), 2));
+	obstacle.push_back(obsParam(glm::vec3(0, -4, 10), 2));
+	obstacle.push_back(obsParam(glm::vec3(6, -6, -20), 2));
+	//obstacle.push_back(obsParam(glm::vec3(20, 10, -50), 2)); --> Moon (Image wouldn't load)
+	obstacle.push_back(obsParam(glm::vec3(2, 4, -10), 2)); // earth
 
-	sphere[7] = make_shared<Sphere>(2);
-	sphere[7]->position = glm::vec3(6, -6, -20);
-    sphere[7]->diffuse = glm::vec3(1.0f,0.0f,1.0f);
-	Attach(sphere[7]);
+	// assign spheres as obstacles
+	for (int i = 0 ; i < obstacle.size(); i ++)
+	{
+		if(i == obstacle.size() - 1)
+		{
+			sphere[i] = make_shared<Sphere>(obstacle[i].radius,"earth"); //Creating a new sphere with texture earth
+			sphere[i]->tag = "Obstacle";
+			sphere[i]->position = obstacle[i].pos;
+			Attach(sphere[i]);
+		}
 
-	sphere[8] = make_shared<Sphere>(2);
-	sphere[8]->position = glm::vec3(-6, 2, 10);
-    sphere[8]->diffuse = glm::vec3(0.0f,0.0f,1.0f);
-	Attach(sphere[8]);
+		/* Moon code 
+		if(i == obstacle.size() - 2)
+		{
+			sphere[i] = make_shared<Sphere>(obstacle[i].radius,"moon"); //Creating a new sphere with texture moon
+			sphere[i]->tag = "Obstacle";
+			sphere[i]->position = obstacle[i].pos;
+			Attach(sphere[i]);
+		}
+		*/
 
-	sphere[9] = make_shared<Sphere>(2);
-	sphere[9]->position = glm::vec3(6, 2, 10);
-    sphere[9]->diffuse = glm::vec3(0.0f,0.0f,1.0f);
-	Attach(sphere[9]);
+		else
+		{
+			sphere[i] = make_shared<Sphere>(obstacle[i].radius);
+			sphere[i]->tag = "Obstacle";
+			sphere[i]->position = obstacle[i].pos;
+			Attach(sphere[i]);
+		}
 
-	sphere[10] = make_shared<Sphere>(2);
-	sphere[10]->position = glm::vec3(0, 8, 10);
-    sphere[10]->diffuse = glm::vec3(0.0f,0.0f,1.0f);
-	Attach(sphere[10]);
-
-	sphere[11] = make_shared<Sphere>(2);
-	sphere[11]->position = glm::vec3(0, -4, 10);
-    sphere[11]->diffuse = glm::vec3(0.0f,0.0f,1.0f);
-	Attach(sphere[11]);
-
-/*	sphere[12] = make_shared<Sphere>(0.25);
-    sphere[12]->diffuse = glm::vec3(1.0f,1.0f,0.0f);
-
-	starFountain = make_shared<FountainEffect>(500);
-	starFountain->Attach(sphere[12]);
-	starFountain ->diffuse = glm::vec3(1.0f,1.0f, 0.0f);
-	Attach(starFountain);*/
+		if(i == 0) // pinball
+		{
+			sphere[i]->diffuse = glm::vec3(1.0f,1.0f,1.0f);
+		}
+	}
 
 	riftEnabled = false;
 	fullscreen = false;
 	width = 800;
 	height = 600;
-
-	fountainTheta = 0.0f;
 
 	mass = 1.0f;
 
@@ -107,15 +121,17 @@ bool Cosmic::Initialise()
 
 	Game::Initialise();
 
-	camera->GetController()->position = glm::vec3(0, 4, 20);
+	camera->GetController()->position = glm::vec3(0, 4, 30);
 	return true;
 }
 
 void Cosmic::Update(float timeDelta)
 {	
+
 	// Forces on Cosmic
 	float newtons = 30.0f;
 	float epsilon = glm::epsilon<float>();
+
 /*	if (keyState[SDL_SCANCODE_F])
 	{
 		force = force + (sphere[0]->look * newtons);
@@ -149,23 +165,10 @@ void Cosmic::Update(float timeDelta)
 
 	if (keyState[SDL_SCANCODE_SPACE]) //prepare to release sphere[0].
 	{
-		//force = glm::vec3(0,0,0);
 		sphere[0]->velocity = glm::vec3(0,0,0);
 		sphere[0]->position = glm::vec3(0, 2, 10);
-		force += glm::vec3(0,0,-5); // build up starting force
-		//force += (sphere[0]->look * newtons);
+		force += (sphere[0]->look * newtons * 2.0f); // build up starting force
 	}
-/*	else if(tempforce != glm::vec3(0,0,0)) // release sphere[0].
-	{
-		force = tempforce;
-		force += glm::vec3((RandomFloat()*5),(RandomFloat()*5),0);
-		//if(force.z < 0)
-		//{
-			//force.z = -force.z;
-		//}
-		tempforce = glm::vec3(0,0,0);
-	} */
-	
 
 	if (keyState[SDL_SCANCODE_TAB]) // operate 'flipper' spheres
 	{
@@ -174,7 +177,7 @@ void Cosmic::Update(float timeDelta)
 		sphere[10]->position = glm::vec3(0, 6, 10);
 		sphere[11]->position = glm::vec3(0, -2, 10);
 	}
-	else // return 'flipper'spheres
+	else // return 'flipper' spheres
 	{
 		sphere[8]->position = glm::vec3(-6, 2, 10);
 		sphere[9]->position = glm::vec3(6, 2, 10);
@@ -195,58 +198,48 @@ void Cosmic::Update(float timeDelta)
 		sphere[3]->position = glm::vec3(0, 2, -30);
 	}
 	
-	
-/*	// create 'gravity' back towards start position.
+	// create 'gravity' back towards start position.
 	if(sphere[0]->position.z < 10)
 	{
-		force.z += 1;
+		force.z += 4;
 	}
 	if(sphere[0]->position.x < 0)
 	{
-		force.x += 1;
+		force.x += 4;
 	}
 	else if(sphere[0]->position.x > 0)
 	{
-		force.x -= 1;
+		force.x -= 4;
 	}
 	if(sphere[0]->position.y < 2)
 	{
-		force.y += 1;
+		force.y += 4;
 	}
 	else if(sphere[0]->position.y > 2)
 	{
-		force.y -= 1;
-	}*/
-
+		force.y -= 4;
+	}
+	
 	// acceleration, velocity, position
 	accel = force/mass;
 
 	velocity += accel * timeDelta;
 
-/*	// detect excessive velocity.
-	if(velocity.x > 100)
-	{
-		velocity.x = 99;
-	}
-	if(velocity.y > 100);
-	{
-		velocity.y = 99;
-	}
-	if(velocity.z > 100)
-	{
-		velocity.z = 99;
-	}
-	*/
-	for(int i=1; i<12; i++) // check for collisions with static spheres
+	for(int i=1; i<13; i++) // check for collisions of sphere[0] with other spheres
 	{
 		if(glm::length(sphere[i]->position - sphere[0]->position) <= (sphere[i]->scale.x + sphere[0]->scale.x)) // check for collision with specific spheres.
 		{
+			score += 5;
 			soundSystem->PlaySound("Ding", glm::vec3(0,0,0));
 			velocity -= (sphere[i]->position - sphere[0]->position);
-			//if((i = 8) || (i = 9) || (i = 10) || (i = 11))
-			//{
-				//velocity = velocity * 1.05f; // boost velocity of sphere[0].
-			//}
+
+			if(i == 8 || i == 9 || i == 10 || i == 11 ) // if sphere[0] collides with one of the flipper spheres.
+			{
+				if (keyState[SDL_SCANCODE_TAB])
+				{
+					velocity = velocity * 1.05f; // boost velocity of sphere[0].
+				}
+			}
 			//sphere[0]->position = bouncePosition; // restore sphere[0] to pre-collision position.
 		}
 		else
@@ -258,9 +251,28 @@ void Cosmic::Update(float timeDelta)
 
 	if(glm::length(glm::vec3(0,2,-10) - sphere[0]->position) >= 50) // check for collision with virtual sphere boundary
 	{
-			velocity = -velocity;
+			velocity += (glm::vec3(0,2,-10) - sphere[0]->position);
 			
 			//sphere[0]->position = bouncePosition; // restore sphere[0] to pre-collision position.
+	}
+
+	if(glm::length(glm::vec3(0,2,-40) - sphere[0]->position) >= 50) // to prevent sphere[0] going behind flipper spheres except at centre.
+	{
+		// check if sphere[0] near centre
+		if((sphere[0]->position.x < 4 && sphere[0]->position.x > -4) && (sphere[0]->position.y < 6 && sphere[0]->position.y > -2) )
+		{
+			if(sphere[0]->position.z > 11) // check if sphere[0] back at start position.
+			{
+				score = 0;
+				force = glm::vec3(0,0,0);
+				sphere[0]->velocity = glm::vec3(0,0,0);
+				sphere[0]->position = glm::vec3(0, 2, 11);
+			}
+		}
+		else // if away from centre - bounce back
+		{
+			velocity += ((glm::vec3(0,2,-40) - sphere[0]->position) * 1.01f);
+		}
 	}
 
 	sphere[0]->position += velocity * timeDelta;
@@ -289,31 +301,31 @@ void Cosmic::Update(float timeDelta)
 
 	velocity = velocity * 0.99f;
 
-/*	fountainTheta += timeDelta;
-	
-	if (fountainTheta >= glm::pi<float>() * 2.0f)
-	{
-		fountainTheta = 0.0f;
-	}
-	
-	starFountain->position.x += timeDelta * speed;
-	starFountain->position.z += timeDelta * speed;
-	starFountain->position.y += timeDelta * speed;
-
-	if (starFountain->position.y > 30)
-	{
-		speed = -speed;
-	}
-
-	if (starFountain->position.y < -30)
-	{
-		speed = -speed;
-	}
 
 	// Reset the force accumulator
 	force = glm::vec3(0.0f,0.0f,0.0f);
-*/
 	
-	Game::Update(timeDelta);
+	//check if the negative target position (-Z) is reached and set a new target position. 
+	if(shootingStar->position.z < starController->targetPos.z + 10)
+	{
+		starController->TurnOn(SteeringController::behaviour_type::arrive); //Using the arrive behaviour to send the shooting star to a particular point
+		starController->TurnOn(SteeringController::behaviour_type::obstacle_avoidance); // Using the Obstacle avoidance so the shooting star avoids the spheres (Planets). 
+		newPos = glm::vec3(RandomFloat() * 30, RandomFloat() * 15, 20); // Create a new position, randomising X and Y to an extent. Z remains fixed as we want the shooting star to navigate around the game between Z = 20 and Z = -70
+		starController->targetPos = newPos; // Sets the new target position
+	}
+	
+	//check if the positive target position (+Z) is reached and a set a new target position
+	if((shootingStar->position.z > starController->targetPos.z - 10))
+	{
+		starController->TurnOn(SteeringController::behaviour_type::arrive);
+		starController->TurnOn(SteeringController::behaviour_type::obstacle_avoidance);
+		newPos = glm::vec3(RandomFloat() * -30, RandomFloat() * 5, -70); // Create a new position, randomising X and Y to an extent. Z remains fixed as we want the shooting star to navigate around the game between Z = 20 and Z = -70
+		starController->targetPos = newPos; // Sets the new target position
+	}
 
+		s = to_string(score);
+		PrintText("Score: " + s);
+
+	Game::Update(timeDelta);
+	
 }

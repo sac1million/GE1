@@ -37,9 +37,9 @@ void FountainEffect::InitParticle(Particle & p)
 
 	p.velocity = glm::vec3(RandomClamped(-radius, radius), RandomClamped(), RandomClamped(-radius, radius)) * 10.0f;
 	p.velocity.y = glm::abs<float>(p.velocity.y);
-	p.diffuse.r = diffuse.r * RandomClamped(0, 1);
-	p.diffuse.g = diffuse.g * RandomClamped(0, 1);
-	p.diffuse.b = diffuse.b * RandomClamped(0, 1);
+	p.diffuse.r = diffuse.r * RandomClamped(0.8f, 1.0f);
+	p.diffuse.g = diffuse.g * RandomClamped(0.8f, 1.0f);
+	p.diffuse.b = diffuse.b * RandomClamped(0, 0);
 	p.age = 0;
 	p.alive = true;
 	p.size = RandomClamped(10, 50);
