@@ -165,6 +165,7 @@ void Cosmic::Update(float timeDelta)
 
 	if (keyState[SDL_SCANCODE_SPACE]) //prepare to release sphere[0].
 	{
+		score = 0; // zero score
 		sphere[0]->velocity = glm::vec3(0,0,0);
 		sphere[0]->position = glm::vec3(0, 2, 10);
 		force += (sphere[0]->look * newtons * 2.0f); // build up starting force
@@ -263,7 +264,6 @@ void Cosmic::Update(float timeDelta)
 		{
 			if(sphere[0]->position.z > 11) // check if sphere[0] back at start position.
 			{
-				score = 0;
 				force = glm::vec3(0,0,0);
 				sphere[0]->velocity = glm::vec3(0,0,0);
 				sphere[0]->position = glm::vec3(0, 2, 11);
